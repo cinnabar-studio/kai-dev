@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* DayPicker custom styles */
+.rdp {
+  --rdp-cell-size: 48px !important;
+  --rdp-accent-color: rgb(37 99 235);
+  --rdp-background-color: rgb(37 99 235);
+  margin: 0;
+  width: 350px;
+}
+
+.rdp-months {
+  padding: 16px !important;
+  background: rgb(24 24 27);
+  border-radius: 8px;
+}
+
+.rdp-month {
+  width: 100%;
+}
+
+.rdp-table {
+  width: 100%;
+  max-width: none;
+}
+
+.rdp-day_selected:not([disabled]) { 
+  color: white;
+  background-color: var(--rdp-accent-color);
+  font-weight: 500;
+}
+
+.rdp-day_selected:hover:not([disabled]) {
+  background-color: var(--rdp-accent-color);
+  opacity: 0.8;
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: rgb(39 39 42);
+}
+
+.rdp-head_cell {
+  color: rgb(161 161 170);
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rdp-caption {
+  margin-bottom: 12px;
+  padding: 0 8px;
+}
+
+.rdp-caption_label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rdp-nav {
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
+}
+
+.rdp-nav_button {
+  color: rgb(161 161 170);
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.rdp-nav_button:hover {
+  color: white;
+  background-color: rgb(39 39 42);
+}
+
+.rdp-day {
+  font-size: 0.875rem;
+  height: var(--rdp-cell-size);
+  width: var(--rdp-cell-size);
+  font-weight: 500;
+  border-radius: 8px !important;
+  transition: all 0.2s;
+  margin: 0 !important;
+}
+
+.rdp-day_today:not(.rdp-day_selected) {
+  border: 2px solid rgb(37 99 235) !important;
+  color: rgb(37 99 235);
+  font-weight: 600;
+}
+
+.rdp-day_outside {
+  opacity: 0.3;
+}
+
+/* Day with note indicator */
+.rdp-day.rdp-day_hasNote::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background-color: rgb(37 99 235);
+  border-radius: 50%;
+}
