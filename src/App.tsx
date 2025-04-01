@@ -5,6 +5,7 @@ import { Chat } from './components/Chat';
 import { DailyNote } from './components/DailyNote';
 import FeedPage from './pages/FeedPage';
 import GoalsPanel from './components/GoalsPanel';
+import PasswordProtection from './components/PasswordProtection';
 
 // Lazy load components
 const NotesPage = React.lazy(() => import('./pages/NotesPage'));
@@ -32,6 +33,7 @@ function App() {
   const [chatState, setChatState] = useState<ChatState>({
     isVisible: false,
   });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const handleAskQuestion = (itemId: string, question: string) => {
     setChatState({
@@ -41,6 +43,10 @@ function App() {
         question,
       },
     });
+  };
+
+  const handleAuthenticated = () => {
+    setIsAuthenticated(true);
   };
 
   const renderChatButton = () => (
@@ -85,6 +91,10 @@ function App() {
       </div>
     )
   );
+
+  if (!isAuthenticated) {
+    return <PasswordProtection onAuthenticated={handleAuthenticated} />;
+  }
 
   if (currentPage === 'feed') {
     return (

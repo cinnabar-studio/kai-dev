@@ -417,15 +417,15 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
 };
 
 const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
-  const {
-    tasks,
+  const { 
+    tasks, 
     projects,
     milestones,
     updateTask,
     toggleTaskUrgent,
-    toggleTask,
-    archiveTask,
-    unarchiveTask,
+    toggleTask, 
+    archiveTask, 
+    unarchiveTask, 
     taskFilters,
     setTaskStatusFilter,
     setTaskUrgentFilter,
@@ -437,14 +437,14 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
     clearTaskFilters,
     addTask
   } = useGoalsStore();
-
+  
   const [showTaskFilters, setShowTaskFilters] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(undefined);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [taskToArchive, setTaskToArchive] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
-
+  
   // Filter for available milestones based on selected project
   const availableMilestones = useMemo(() => {
     if (!taskFilters.selectedProjectId) {
@@ -466,18 +466,18 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
       const inDescription = task.description?.toLowerCase().includes(searchLower);
       if (!inTitle && !inDescription) return false;
     }
-
+    
     // Status filter
     if (taskFilters.status === 'completed' && !task.completed) return false;
     if (taskFilters.status === 'pending' && (task.completed || task.archived)) return false;
     if (taskFilters.status === 'archived' && !task.archived) return false;
-
+    
     // Urgent filter
     if (taskFilters.urgentOnly && !task.urgent) return false;
-
+    
     // Impact filter
     if (taskFilters.selectedImpact && task.impact !== taskFilters.selectedImpact) return false;
-
+    
     // Project filter
     if (taskFilters.selectedProjectId) {
       if (taskFilters.selectedProjectId === 'uncategorized') {
@@ -486,13 +486,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
         return false;
       }
     }
-
+    
     // Milestone filter
     if (taskFilters.selectedMilestoneId && task.milestoneId !== taskFilters.selectedMilestoneId) return false;
-
+    
     return true;
   }), [tasks, taskFilters]);
-
+  
   // Sort the filtered tasks
   const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
     if (taskFilters.sortBy === 'newest') {
@@ -510,7 +510,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
       return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
     }
   }), [filteredTasks, taskFilters.sortBy]);
-
+  
   // Select first task by default
   useEffect(() => {
     if (sortedTasks.length > 0 && !selectedTaskId) {
@@ -522,10 +522,10 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
       setSelectedTaskId(undefined);
     }
   }, [sortedTasks, selectedTaskId]);
-
+  
   // Update the filter tags section
   const filterTags = [];
-
+  
   if (taskFilters.status !== 'pending') {
     filterTags.push({
       id: 'status',
@@ -534,7 +534,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
       icon: <CheckCircle2 size={14} className="flex-shrink-0" />
     });
   }
-
+  
   if (taskFilters.urgentOnly) {
     filterTags.push({
       id: 'urgent',
@@ -543,7 +543,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
       icon: <AlertTriangle size={14} className="flex-shrink-0" />
     });
   }
-
+  
   if (taskFilters.selectedImpact) {
     filterTags.push({
       id: 'impact',
@@ -563,19 +563,19 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
       icon: <Briefcase size={14} className="flex-shrink-0" />
     });
   }
-
+  
   if (taskFilters.selectedMilestoneId) {
     const milestone = milestones.find(m => m.id === taskFilters.selectedMilestoneId);
     if (milestone) {
-      filterTags.push({
-        id: 'milestone',
+    filterTags.push({
+      id: 'milestone',
         label: `Milestone: ${milestone.title}`,
         color: 'bg-orange-500/20 text-orange-400',
-        icon: <Target size={14} className="flex-shrink-0" />
-      });
+      icon: <Target size={14} className="flex-shrink-0" />
+    });
     }
   }
-
+  
   // Handle removing a single filter tag
   const handleRemoveTag = (id: string) => {
     if (id === 'status') setTaskStatusFilter('pending');
@@ -603,7 +603,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
       setShowArchiveConfirm(true);
     }
   };
-
+  
   // Sort options
   const sortOptions = [
     { id: 'newest', label: 'Newest First' },
@@ -626,7 +626,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
     setShowTaskModal(false);
     setEditingTask(undefined);
   };
-
+  
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -740,42 +740,42 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
                   </option>
                 ) : (
                   <>
-                    <option value="">All Projects</option>
-                    <option value="uncategorized">Uncategorized</option>
+                <option value="">All Projects</option>
+                <option value="uncategorized">Uncategorized</option>
                     {projects.map(project => (
-                      <option key={project.id} value={project.id}>
-                        {project.title}
-                      </option>
-                    ))}
+                  <option key={project.id} value={project.id}>
+                    {project.title}
+                  </option>
+                ))}
                   </>
                 )}
               </select>
             </div>
 
             {/* Milestone Filter */}
-            <div>
-              <h3 className="text-sm font-medium mb-2 flex items-center">
-                <Target size={14} className="mr-2 text-purple-400" />
-                Milestone
-              </h3>
-              <select
+              <div>
+                <h3 className="text-sm font-medium mb-2 flex items-center">
+                  <Target size={14} className="mr-2 text-purple-400" />
+                  Milestone
+                </h3>
+                <select
                 value={taskFilters.selectedMilestoneId || ''}
                 onChange={(e) => setTaskMilestoneFilter(e.target.value || null)}
                 disabled={taskFilters.selectedProjectId === 'uncategorized'}
                 className={`w-full bg-zinc-800 rounded-lg px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                   taskFilters.selectedProjectId === 'uncategorized' ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
-              >
-                <option value="">All Milestones</option>
-                {availableMilestones.map(milestone => (
-                  <option key={milestone.id} value={milestone.id}>
-                    {milestone.title}
-                  </option>
-                ))}
-              </select>
+                >
+                  <option value="">All Milestones</option>
+                  {availableMilestones.map(milestone => (
+                    <option key={milestone.id} value={milestone.id}>
+                      {milestone.title}
+                    </option>
+                  ))}
+                </select>
               {taskFilters.selectedProjectId === 'uncategorized' && (
                 <p className="text-xs text-zinc-500 mt-1">Milestone filter is disabled for uncategorized tasks</p>
-              )}
+            )}
             </div>
 
             {/* Status Filter */}
@@ -835,13 +835,13 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
                   tasks={sortedTasks}
                   selectedTaskId={selectedTaskId}
                   onSelectTask={setSelectedTaskId}
-                  onToggleUrgent={toggleTaskUrgent}
+                      onToggleUrgent={toggleTaskUrgent}
                   onToggleCompleted={toggleTask}
                   onArchive={handleArchive}
                   onUnarchive={(taskFilters.status === 'archived') ? unarchiveTask : undefined}
                   onAskQuestion={onAskQuestion}
                   onUpdateImpact={handleUpdateImpact}
-                />
+                    />
               )}
             </div>
           </div>
