@@ -25,6 +25,27 @@ interface NotesState {
 }
 
 export const useNoteStore = create<NotesState>((set, get) => {
+  // Batch updates to localStorage
+  let localStorageTimeout: NodeJS.Timeout | null = null;
+  
+  const batchUpdate = (updates: Partial<NotesState>) => {
+    set(state => {
+      const newState = { ...state, ...updates };
+      
+      // Clear existing timeout if any
+      if (localStorageTimeout) {
+        clearTimeout(localStorageTimeout);
+      }
+      
+      // Set new timeout to save to localStorage
+      localStorageTimeout = setTimeout(() => {
+        localStorage.setItem('dailyNotes', JSON.stringify(newState.notes));
+      }, 1000); // Debounce for 1 second
+      
+      return newState;
+    });
+  };
+
   // Try to load notes from localStorage
   const savedNotes = localStorage.getItem('dailyNotes');
   const savedTemplate = localStorage.getItem('notesTemplate');
@@ -70,45 +91,26 @@ export const useNoteStore = create<NotesState>((set, get) => {
         updatedAt: new Date().toISOString(),
       };
       
-      set(state => {
-        const updatedNotes = {
-          ...state.notes,
+      batchUpdate({
+        notes: {
+          ...get().notes,
           [dateKey]: newNote,
-        };
-        
-        // Save to localStorage
-        localStorage.setItem('dailyNotes', JSON.stringify(updatedNotes));
-        
-        return { notes: updatedNotes };
+        }
       });
       
       return newNote;
     },
     
     updateNote: (id: string, content: string) => {
-      set(state => {
-        // Find the note by id
-        const noteEntries = Object.entries(state.notes);
-        const noteEntry = noteEntries.find(([_, note]) => note.id === id);
-        
-        if (!noteEntry) return state;
-        
-        const [dateKey, note] = noteEntry;
-        const updatedNote = {
-          ...note,
-          content,
-          updatedAt: new Date().toISOString(),
-        };
-        
-        const updatedNotes = {
-          ...state.notes,
-          [dateKey]: updatedNote,
-        };
-        
-        // Save to localStorage
-        localStorage.setItem('dailyNotes', JSON.stringify(updatedNotes));
-        
-        return { notes: updatedNotes };
+      batchUpdate({
+        notes: {
+          ...get().notes,
+          [get().getDateKey(new Date())]: {
+            ...get().notes[get().getDateKey(new Date())],
+            content,
+            updatedAt: new Date().toISOString(),
+          }
+        }
       });
     },
     

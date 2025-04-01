@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Send, Bot, X, PlusCircle, MessageSquare, Pencil, Trash2, ChevronRight, ChevronLeft, Search, MoreVertical, Menu, LightbulbIcon, Info, Sparkles } from 'lucide-react';
+import { FixedSizeList as List } from 'react-window';
 
 // Types for our chat data structure
 interface ChatMessage {
@@ -23,6 +24,45 @@ interface ChatProps {
     question: string;
   };
 }
+
+// MessageItem component to display individual messages
+const MessageItem: React.FC<{ message: ChatMessage }> = ({ message }) => {
+  const isUser = message.type === 'user';
+  
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+      <div className={`max-w-[80%] rounded-lg p-3 ${
+        isUser 
+          ? 'bg-orange-500 text-white' 
+          : 'bg-zinc-800 text-zinc-200'
+      }`}>
+        <p className="text-sm">{message.content}</p>
+        <span className="text-xs opacity-70 mt-1 block">
+          {message.timestamp.toLocaleTimeString()}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const MessageList: React.FC<{ messages: ChatMessage[] }> = ({ messages }) => {
+  return (
+    <List
+      height={400}
+      itemCount={messages.length}
+      itemSize={50}
+      width="100%"
+    >
+      {({ index, style }) => (
+        <div style={style}>
+          <MessageItem
+            message={messages[index]}
+          />
+        </div>
+      )}
+    </List>
+  );
+};
 
 const Chat: React.FC<ChatProps> = ({ initialQuestion }) => {
   // State for the current message being typed
@@ -284,6 +324,15 @@ const Chat: React.FC<ChatProps> = ({ initialQuestion }) => {
         )
       )
     : threads;
+  
+  const renderMessageList = useMemo(() => {
+    if (!activeThread?.messages.length) return null;
+    return (
+      <MessageList
+        messages={activeThread.messages}
+      />
+    );
+  }, [activeThread?.messages]);
   
   // Render empty state when no threads exist
   const renderEmptyState = () => (
@@ -588,32 +637,7 @@ const Chat: React.FC<ChatProps> = ({ initialQuestion }) => {
                     </div>
                   </div>
                 ) : (
-                  activeThread?.messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex items-start space-x-2 ${
-                        msg.type === 'assistant' ? '' : 'justify-end'
-                      }`}
-                    >
-                      {msg.type === 'assistant' && (
-                        <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
-                          <Bot size={16} className="text-white" strokeWidth={2.5} />
-                        </div>
-                      )}
-                      <div
-                        className={`flex-1 max-w-[80%] rounded-lg p-3 ${
-                          msg.type === 'assistant'
-                            ? 'bg-zinc-800'
-                            : 'bg-orange-500 ml-auto'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        <span className="text-xs text-zinc-400 mt-1 block">
-                          {msg.timestamp.toLocaleTimeString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))
+                  renderMessageList
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -721,4 +745,4 @@ const Star = ({ size = 24, className = "" }) => (
   </svg>
 );
 
-export default Chat;
+export { Chat };

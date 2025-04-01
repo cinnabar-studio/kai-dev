@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, 
   Filter, 
@@ -20,23 +20,25 @@ import {
   Clock,
   Edit,
   MessageSquare,
-  FileText
+  FileText,
+  Flag
 } from 'lucide-react';
 import { useGoalsStore, type Task, type ImpactLevel } from '../store/goalsStore';
 import { useCommentsStore } from '../store/commentsStore';
 import TaskItem from '../components/TaskItem';
 import TaskModal from '../components/modals/TaskModal';
 import ConfirmationDialog from '../components/ConfirmationDialog';
-import FilterSortBar from '../components/FilterSortBar';
-import FilterPanel from '../components/FilterPanel';
+import { FilterBar } from '../components/FilterBar';
+import { FilterPanel } from '../components/FilterPanel';
 import ImpactSelect from '../components/ImpactSelect';
 import Comments from '../components/Comments';
+import TaskList from '../components/TaskList';
 
 // Status filters
-type StatusFilter = 'all' | 'completed' | 'archived';
+type StatusFilter = 'pending' | 'completed' | 'archived' | 'incomplete';
 
 interface TasksPageProps {
-  onAskQuestion: (itemId: string, question: string) => void;
+  onAskQuestion: (question: string) => void;
 }
 
 interface TaskDetailProps {
@@ -131,92 +133,87 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
   
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="border-b border-zinc-800 p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-4 min-w-0 flex-1">
-          <button
-            onClick={() => onToggleCompleted(task.id)}
-            className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center ${
-              task.completed
-                ? 'bg-green-500 border-green-500'
-                : 'border-zinc-600 hover:border-green-500'
-            }`}
-          >
-            {task.completed && <CheckCircle size={16} className="text-white" />}
-          </button>
-          <h2 className="text-lg font-semibold truncate max-w-[calc(100%-200px)]">{task.title}</h2>
-        </div>
-        <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
-          {/* Archive Button - Separate as requested */}
-          {task.archived && onUnarchive ? (
+      <div className="border-b border-zinc-800 p-4">
+        <div className="flex items-start space-x-4">
+          <div className="flex flex-col items-center">
             <button
-              onClick={() => onUnarchive(task.id)}
-              className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm flex items-center space-x-1"
+              onClick={() => onToggleCompleted(task.id)}
+              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                task.completed
+                  ? 'bg-green-500 border-green-500'
+                  : 'border-zinc-600 hover:border-green-500'
+              }`}
             >
-              <Archive size={14} className="text-blue-400" />
-              <span className="text-blue-400">Unarchive</span>
+              {task.completed && <CheckCircle size={14} className="text-white" />}
             </button>
-          ) : (
-            <button
-              onClick={() => onArchive(task.id)}
-              className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm flex items-center space-x-1"
-            >
-              <Archive size={14} className="text-red-400" />
-              <span className="text-red-400">Archive</span>
-            </button>
-          )}
-          
-          {isEditing ? (
-            <button
-              onClick={handleSave}
-              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm flex items-center space-x-1"
-            >
-              <Save size={14} />
-              <span>Save</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center space-x-1"
-            >
-              <Edit size={14} />
-              <span>Edit</span>
-            </button>
-          )}
+          </div>
+          <div className="flex-1 min-w-0 -ml-6">
+            {isEditing ? (
+              <input
+                type="text"
+                value={editedTask.title}
+                onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+                className="w-full bg-zinc-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold"
+              />
+            ) : (
+              <h2 className={`text-lg font-semibold break-words line-clamp-2 ${task.completed ? 'line-through text-zinc-500' : ''}`}>{task.title}</h2>
+            )}
+            <div className="flex space-x-1 mt-2">
+              {isEditing ? (
+                <button
+                  onClick={handleSave}
+                  className="p-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 rounded-lg transition-colors"
+                  title="Save changes"
+                >
+                  <Save size={16} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors"
+                  title="Edit task"
+                >
+                  <Edit size={16} />
+                </button>
+              )}
+              {task.archived && onUnarchive ? (
+                <button
+                  onClick={() => onUnarchive(task.id)}
+                  className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors"
+                  title="Unarchive task"
+                >
+                  <Archive size={16} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => onArchive(task.id)}
+                  className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                  title="Archive task"
+                >
+                  <Archive size={16} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-w-0">
         <div className="p-4 space-y-4">
-          {/* Title & Description */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">Title</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedTask.title}
-                  onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
-                  className="w-full bg-zinc-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <div className="bg-zinc-900 rounded-lg px-3 py-2 break-words">{task.title}</div>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">Description</label>
-              {isEditing ? (
-                <textarea
-                  value={editedTask.description}
-                  onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
-                  className="w-full bg-zinc-800 rounded-lg px-3 py-2 min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <div className="bg-zinc-900 rounded-lg px-3 py-2 min-h-[60px] max-h-[200px] overflow-y-auto">
-                  {task.description || <span className="text-zinc-500 italic">No description</span>}
-                </div>
-              )}
-            </div>
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-1">Description</label>
+            {isEditing ? (
+              <textarea
+                value={editedTask.description}
+                onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
+                className="w-full bg-zinc-800 rounded-lg px-3 py-2 min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            ) : (
+              <div className="bg-zinc-900 rounded-lg px-3 py-2 min-h-[60px] max-h-[200px] overflow-y-auto">
+                <p className="break-words whitespace-pre-wrap">{task.description || <span className="text-zinc-500 italic">No description</span>}</p>
+              </div>
+            )}
           </div>
           
           {/* Notes */}
@@ -232,7 +229,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
             ) : (
               <div className="bg-zinc-900 rounded-lg px-3 py-2 min-h-[80px] max-h-[300px] overflow-y-auto">
                 {task.notes ? (
-                  <div className="whitespace-pre-wrap">{task.notes}</div>
+                  <div className="whitespace-pre-wrap break-words">{task.notes}</div>
                 ) : (
                   <span className="text-zinc-500 italic">No notes added</span>
                 )}
@@ -242,49 +239,50 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
           
           {/* Status & Priority */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-medium text-zinc-400 mb-1">Priority</label>
               {isEditing ? (
-                <div className="space-y-2">
-                  <ImpactSelect 
-                    value={editedTask.impact as ImpactLevel} 
-                    onChange={(impact) => setEditedTask({ ...editedTask, impact })} 
+                <ImpactSelect 
+                  value={editedTask.impact as ImpactLevel} 
+                  onChange={(impact) => setEditedTask({ ...editedTask, impact })} 
+                />
+              ) : (
+                <div className={`inline-block px-3 py-1 rounded-lg text-sm ${
+                  task.impact === 'High' 
+                    ? 'bg-red-500/20 text-red-400' 
+                    : task.impact === 'Medium'
+                    ? 'bg-yellow-500/20 text-yellow-400'
+                    : 'bg-blue-500/20 text-blue-400'
+                }`}>
+                  {task.impact} Impact
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1">Urgency</label>
+              {isEditing ? (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="urgent-toggle"
+                    checked={editedTask.urgent}
+                    onChange={(e) => setEditedTask({ ...editedTask, urgent: e.target.checked })}
+                    className="rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500"
                   />
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="urgent-toggle"
-                      checked={editedTask.urgent}
-                      onChange={(e) => setEditedTask({ ...editedTask, urgent: e.target.checked })}
-                      className="rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500"
-                    />
-                    <label htmlFor="urgent-toggle" className="text-sm">Urgent</label>
-                  </div>
+                  <label htmlFor="urgent-toggle" className="text-sm">Urgent</label>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className={`inline-block px-3 py-1 rounded-lg text-sm ${
-                    task.impact === 'High' 
+                <button
+                  onClick={() => onToggleUrgent(task.id)}
+                  className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm ${
+                    task.urgent 
                       ? 'bg-red-500/20 text-red-400' 
-                      : task.impact === 'Medium'
-                      ? 'bg-yellow-500/20 text-yellow-400'
-                      : 'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    {task.impact} Impact
-                  </div>
-                  
-                  {task.urgent && (
-                    <div className="flex items-center">
-                      <button
-                        onClick={() => onToggleUrgent(task.id)}
-                        className="flex items-center space-x-1 px-3 py-1 bg-red-500/20 text-red-400 rounded-lg text-sm"
-                      >
-                        <AlertTriangle size={14} />
-                        <span>Urgent</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                      : 'bg-zinc-800 text-zinc-400 hover:text-red-400'
+                  }`}
+                >
+                  <AlertTriangle size={14} />
+                  <span>{task.urgent ? 'Urgent' : 'Not Urgent'}</span>
+                </button>
               )}
             </div>
           </div>
@@ -296,7 +294,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
               {isEditing ? (
                 <select
                   value={editedTask.projectId || ''}
-                  onChange={(e) => setEditedTask({ ...editedTask, projectId: e.target.value || null })}
+                  onChange={(e) => setEditedTask({ ...editedTask, projectId: e.target.value || undefined })}
                   className="w-full bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Uncategorized</option>
@@ -306,8 +304,8 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
                 </select>
               ) : (
                 <div className="bg-zinc-900 rounded-lg px-3 py-2 flex items-center space-x-2">
-                  <Briefcase size={16} className="text-blue-400" />
-                  <span>
+                  <Briefcase size={16} className="text-blue-400 flex-shrink-0" />
+                  <span className="truncate">
                     {task.projectId 
                       ? projects.find(p => p.id === task.projectId)?.title || 'Unknown Project' 
                       : 'Uncategorized'}
@@ -321,7 +319,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
               {isEditing ? (
                 <select
                   value={editedTask.milestoneId || ''}
-                  onChange={(e) => setEditedTask({ ...editedTask, milestoneId: e.target.value || null })}
+                  onChange={(e) => setEditedTask({ ...editedTask, milestoneId: e.target.value || undefined })}
                   disabled={!editedTask.projectId}
                   className={`w-full bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     !editedTask.projectId ? 'opacity-50 cursor-not-allowed' : ''
@@ -336,8 +334,8 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
                 <div className="bg-zinc-900 rounded-lg px-3 py-2 flex items-center space-x-2">
                   {task.milestoneId ? (
                     <>
-                      <Target size={16} className="text-purple-400" />
-                      <span>
+                      <Target size={16} className="text-purple-400 flex-shrink-0" />
+                      <span className="truncate">
                         {milestones.find(m => m.id === task.milestoneId)?.title || 'Unknown Milestone'}
                       </span>
                     </>
@@ -419,112 +417,100 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
 };
 
 const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
-  // Get all tasks data from store
-  const { 
-    tasks, 
-    toggleTask, 
-    archiveTask, 
-    unarchiveTask, 
-    updateTask,
-    updateTaskImpact, 
-    toggleTaskUrgent,
+  const {
+    tasks,
     projects,
     milestones,
-    getMilestonesByProject,
-    updateTaskNotes
+    updateTask,
+    toggleTaskUrgent,
+    toggleTask,
+    archiveTask,
+    unarchiveTask,
+    taskFilters,
+    setTaskStatusFilter,
+    setTaskUrgentFilter,
+    setTaskImpactFilter,
+    setTaskProjectFilter,
+    setTaskMilestoneFilter,
+    setTaskSearchTerm,
+    setTaskSortBy,
+    clearTaskFilters,
+    addTask
   } = useGoalsStore();
-  
-  // State for filtering
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [urgentOnly, setUrgentOnly] = useState(false);
-  const [selectedImpact, setSelectedImpact] = useState<ImpactLevel | ''>('');
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [selectedMilestoneId, setSelectedMilestoneId] = useState('');
-  const [showTasksFilters, setShowTasksFilters] = useState(false);
-  const [showSortOptions, setShowSortOptions] = useState(false);
-  const [sortBy, setSortBy] = useState<'date-asc' | 'date-desc' | 'alpha-asc' | 'alpha-desc'>('date-desc');
-  
-  // State for editing tasks
-  const [showTaskModal, setShowTaskModal] = useState(false);
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-  const [showArchiveConfirmation, setShowArchiveConfirmation] = useState<string | null>(null);
-  
-  // State for selected task
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  
-  // Filter for available milestones based on selected project
-  const [availableMilestones, setAvailableMilestones] = useState<Array<{ id: string; title: string }>>([]);
 
-  // Update available milestones whenever the selected project changes
-  useEffect(() => {
-    if (selectedProjectId) {
-      const projectMilestones = getMilestonesByProject(selectedProjectId)
+  const [showTaskFilters, setShowTaskFilters] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(undefined);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [taskToArchive, setTaskToArchive] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
+
+  // Filter for available milestones based on selected project
+  const availableMilestones = useMemo(() => {
+    if (!taskFilters.selectedProjectId) {
+      return milestones
         .filter(m => !m.archived)
         .map(m => ({ id: m.id, title: m.title }));
-      setAvailableMilestones(projectMilestones);
-      
-      // Reset milestone selection if not part of new project
-      if (selectedMilestoneId) {
-        const milestoneExists = projectMilestones.some(m => m.id === selectedMilestoneId);
-        if (!milestoneExists) {
-          setSelectedMilestoneId('');
-        }
-      }
-    } else {
-      setAvailableMilestones([]);
-      setSelectedMilestoneId('');
     }
-  }, [selectedProjectId, getMilestonesByProject, selectedMilestoneId]);
+    return milestones
+      .filter(m => m.projectId === taskFilters.selectedProjectId && !m.archived)
+      .map(m => ({ id: m.id, title: m.title }));
+  }, [milestones, taskFilters.selectedProjectId]);
 
   // Filter tasks based on search, status, etc.
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = useMemo(() => tasks.filter(task => {
     // Search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      if (
-        !task.title.toLowerCase().includes(searchLower) &&
-        !(task.description || '').toLowerCase().includes(searchLower)
-      ) {
+    if (taskFilters.searchTerm) {
+      const searchLower = taskFilters.searchTerm.toLowerCase();
+      const inTitle = task.title.toLowerCase().includes(searchLower);
+      const inDescription = task.description?.toLowerCase().includes(searchLower);
+      if (!inTitle && !inDescription) return false;
+    }
+
+    // Status filter
+    if (taskFilters.status === 'completed' && !task.completed) return false;
+    if (taskFilters.status === 'pending' && (task.completed || task.archived)) return false;
+    if (taskFilters.status === 'archived' && !task.archived) return false;
+
+    // Urgent filter
+    if (taskFilters.urgentOnly && !task.urgent) return false;
+
+    // Impact filter
+    if (taskFilters.selectedImpact && task.impact !== taskFilters.selectedImpact) return false;
+
+    // Project filter
+    if (taskFilters.selectedProjectId) {
+      if (taskFilters.selectedProjectId === 'uncategorized') {
+        if (task.projectId) return false;
+      } else if (task.projectId !== taskFilters.selectedProjectId) {
         return false;
       }
     }
-    
-    // Status filter
-    if (statusFilter === 'completed' && !task.completed) return false;
-    if (statusFilter === 'all' && task.archived) return false;
-    if (statusFilter === 'archived' && !task.archived) return false;
-    
-    // For 'all' filter, show both completed and non-completed tasks that aren't archived
-    
-    // Urgent filter
-    if (urgentOnly && !task.urgent) return false;
-    
-    // Impact filter
-    if (selectedImpact && task.impact !== selectedImpact) return false;
-    
-    // Project filter
-    if (selectedProjectId && task.projectId !== selectedProjectId) return false;
-    
+
     // Milestone filter
-    if (selectedMilestoneId && task.milestoneId !== selectedMilestoneId) return false;
-    
+    if (taskFilters.selectedMilestoneId && task.milestoneId !== taskFilters.selectedMilestoneId) return false;
+
     return true;
-  });
-  
+  }), [tasks, taskFilters]);
+
   // Sort the filtered tasks
-  const sortedTasks = [...filteredTasks].sort((a, b) => {
-    if (sortBy === 'date-asc') {
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    } else if (sortBy === 'date-desc') {
+  const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
+    if (taskFilters.sortBy === 'newest') {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    } else if (sortBy === 'alpha-asc') {
-      return a.title.localeCompare(b.title);
+    } else if (taskFilters.sortBy === 'oldest') {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    } else if (taskFilters.sortBy === 'priority') {
+      const priorityOrder = { High: 3, Medium: 2, Low: 1 };
+      return priorityOrder[b.impact] - priorityOrder[a.impact];
     } else {
-      return b.title.localeCompare(a.title);
+      // deadline
+      if (!a.deadline && !b.deadline) return 0;
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
     }
-  });
-  
+  }), [filteredTasks, taskFilters.sortBy]);
+
   // Select first task by default
   useEffect(() => {
     if (sortedTasks.length > 0 && !selectedTaskId) {
@@ -533,169 +519,187 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
       // If the selected task is no longer in the filtered list, select the first task
       setSelectedTaskId(sortedTasks[0].id);
     } else if (sortedTasks.length === 0) {
-      setSelectedTaskId(null);
+      setSelectedTaskId(undefined);
     }
   }, [sortedTasks, selectedTaskId]);
-  
-  // Get all available projects (non-archived)
-  const availableProjects = projects.filter(p => !p.archived);
-  
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchTerm('');
-    setStatusFilter('all');
-    setUrgentOnly(false);
-    setSelectedImpact('');
-    setSelectedProjectId('');
-    setSelectedMilestoneId('');
-  };
-  
-  // Handler for updating a task
-  const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
-    updateTask(taskId, updates);
-    
-    // Update task notes separately if it exists in the updates
-    if (updates.notes !== undefined) {
-      updateTaskNotes(taskId, updates.notes);
-    }
-  };
-  
-  // Confirm archiving a task
-  const confirmArchiveTask = () => {
-    if (showArchiveConfirmation) {
-      archiveTask(showArchiveConfirmation);
-      setShowArchiveConfirmation(null);
-    }
-  };
 
-  // Prepare filter tags for the Filter Panel
+  // Update the filter tags section
   const filterTags = [];
-  
-  if (searchTerm) {
-    filterTags.push({
-      id: 'search',
-      label: `Search: ${searchTerm}`,
-      color: 'bg-blue-600/20 text-blue-400',
-      icon: <Search size={14} className="flex-shrink-0" />
-    });
-  }
-  
-  if (statusFilter !== 'all') {
+
+  if (taskFilters.status !== 'pending') {
     filterTags.push({
       id: 'status',
-      label: statusFilter === 'completed' ? 'Completed' : 'Archived',
-      color: statusFilter === 'completed' ? 'bg-green-500/20 text-green-400' : 
-             'bg-zinc-500/20 text-zinc-400',
+      label: taskFilters.status === 'completed' ? 'Completed' : 'Archived',
+      color: taskFilters.status === 'completed' ? 'bg-green-500/20 text-green-400' : 'bg-zinc-500/20 text-zinc-400',
       icon: <CheckCircle2 size={14} className="flex-shrink-0" />
     });
   }
-  
-  if (urgentOnly) {
+
+  if (taskFilters.urgentOnly) {
     filterTags.push({
       id: 'urgent',
-      label: 'Urgent Only',
+      label: 'Urgent',
       color: 'bg-red-500/20 text-red-400',
       icon: <AlertTriangle size={14} className="flex-shrink-0" />
     });
   }
-  
-  if (selectedImpact) {
+
+  if (taskFilters.selectedImpact) {
     filterTags.push({
       id: 'impact',
-      label: `Impact: ${selectedImpact}`,
-      color: selectedImpact === 'High' ? 'bg-red-500/20 text-red-400' :
-             selectedImpact === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
-             'bg-blue-500/20 text-blue-400',
-      icon: <ChevronUp size={14} className="flex-shrink-0" />
-    });
-  }
-  
-  if (selectedProjectId) {
-    filterTags.push({
-      id: 'project',
-      label: availableProjects.find(p => p.id === selectedProjectId)?.title || 'Unknown Project',
-      color: 'bg-blue-600/20 text-blue-400',
-      icon: <Briefcase size={14} className="flex-shrink-0" />
-    });
-  }
-  
-  if (selectedMilestoneId) {
-    filterTags.push({
-      id: 'milestone',
-      label: availableMilestones.find(m => m.id === selectedMilestoneId)?.title || 'Unknown Milestone',
-      color: 'bg-purple-600/20 text-purple-400',
+      label: `Impact: ${taskFilters.selectedImpact}`,
+      color: 'bg-blue-500/20 text-blue-400',
       icon: <Target size={14} className="flex-shrink-0" />
     });
   }
-  
+
+  if (taskFilters.selectedProjectId) {
+    filterTags.push({
+      id: 'project',
+      label: taskFilters.selectedProjectId === 'uncategorized' ? 
+        'Project: Uncategorized' : 
+        `Project: ${projects.find(p => p.id === taskFilters.selectedProjectId)?.title || 'Unknown'}`,
+      color: 'bg-purple-500/20 text-purple-400',
+      icon: <Briefcase size={14} className="flex-shrink-0" />
+    });
+  }
+
+  if (taskFilters.selectedMilestoneId) {
+    const milestone = milestones.find(m => m.id === taskFilters.selectedMilestoneId);
+    if (milestone) {
+      filterTags.push({
+        id: 'milestone',
+        label: `Milestone: ${milestone.title}`,
+        color: 'bg-orange-500/20 text-orange-400',
+        icon: <Target size={14} className="flex-shrink-0" />
+      });
+    }
+  }
+
   // Handle removing a single filter tag
   const handleRemoveTag = (id: string) => {
-    if (id === 'search') setSearchTerm('');
-    else if (id === 'status') setStatusFilter('all');
-    else if (id === 'urgent') setUrgentOnly(false);
-    else if (id === 'impact') setSelectedImpact('');
-    else if (id === 'project') setSelectedProjectId('');
-    else if (id === 'milestone') setSelectedMilestoneId('');
+    if (id === 'status') setTaskStatusFilter('pending');
+    else if (id === 'urgent') setTaskUrgentFilter(false);
+    else if (id === 'impact') setTaskImpactFilter(null);
+    else if (id === 'project') setTaskProjectFilter('');
+    else if (id === 'milestone') setTaskMilestoneFilter(null);
   };
-  
+
+  // Handler for updating a task
+  const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
+    updateTask(taskId, updates);
+  };
+
+  // Handler for updating task impact
+  const handleUpdateImpact = (taskId: string, impact: ImpactLevel) => {
+    updateTask(taskId, { impact });
+  };
+
+  // Handler for archiving a task
+  const handleArchive = (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      setTaskToArchive(task);
+      setShowArchiveConfirm(true);
+    }
+  };
+
   // Sort options
   const sortOptions = [
-    { id: 'date-desc', label: 'Newest First' },
-    { id: 'date-asc', label: 'Oldest First' },
-    { id: 'alpha-asc', label: 'A-Z' },
-    { id: 'alpha-desc', label: 'Z-A' }
+    { id: 'newest', label: 'Newest First' },
+    { id: 'oldest', label: 'Oldest First' },
+    { id: 'priority', label: 'Priority' },
+    { id: 'deadline', label: 'Deadline' }
   ];
   
   // Get selected task
   const selectedTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
   
+  // Handle opening the task modal
+  const handleOpenTaskModal = (task?: Task) => {
+    setEditingTask(task);
+    setShowTaskModal(true);
+  };
+
+  // Handle closing the task modal
+  const handleCloseTaskModal = () => {
+    setShowTaskModal(false);
+    setEditingTask(undefined);
+  };
+
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="p-6 pb-0">
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-[#0A0A0A] text-white">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">Tasks</h1>
           <div className="flex items-center space-x-3">
-            <FilterSortBar
+            <FilterBar
               searchPlaceholder="Search tasks..."
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
+              searchTerm={taskFilters.searchTerm}
+              onSearchChange={setTaskSearchTerm}
               sortOptions={sortOptions}
-              currentSortOption={sortBy}
-              onSortChange={(option) => setSortBy(option as 'date-asc' | 'date-desc' | 'alpha-asc' | 'alpha-desc')}
-              isFilterActive={showTasksFilters || filterTags.length > 0}
-              onToggleFilters={() => setShowTasksFilters(!showTasksFilters)}
+              currentSortOption={taskFilters.sortBy}
+              onSortChange={(option) => setTaskSortBy(option as 'newest' | 'oldest' | 'priority' | 'deadline')}
+              filterTags={filterTags}
+              onRemoveTag={handleRemoveTag}
+              onClearAll={clearTaskFilters}
+              onToggleFilters={() => setShowTaskFilters(!showTaskFilters)}
+              isFiltersOpen={showTaskFilters}
             >
               <button 
-                onClick={() => {
-                  setTaskToEdit(null);
-                  setShowTaskModal(true);
-                }}
+                onClick={() => handleOpenTaskModal()}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center space-x-2 transition-colors"
               >
                 <Plus size={18} />
                 <span>Add Task</span>
               </button>
-            </FilterSortBar>
+            </FilterBar>
           </div>
         </div>
-        
+
+        {/* Active Filters */}
+        {filterTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {filterTags.map((tag) => (
+              <span
+                key={tag.id}
+                className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${tag.color}`}
+              >
+                {tag.icon}
+                {tag.label}
+                <button
+                  onClick={() => handleRemoveTag(tag.id)}
+                  className="hover:text-white"
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            ))}
+            <button
+              onClick={clearTaskFilters}
+              className="text-xs text-zinc-400 hover:text-white px-2 py-1"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
         {/* Status Tabs */}
         <div className="flex mb-4">
           <button
-            onClick={() => setStatusFilter('all')}
+            onClick={() => setTaskStatusFilter('pending')}
             className={`px-3 py-2 text-sm rounded-l-lg transition-colors ${
-              statusFilter === 'all' 
+              taskFilters.status === 'pending' 
                 ? 'bg-zinc-700 text-white' 
                 : 'bg-zinc-800 text-zinc-400 hover:text-white'
             }`}
           >
-            All
+            Pending
           </button>
           <button
-            onClick={() => setStatusFilter('completed')}
+            onClick={() => setTaskStatusFilter('completed')}
             className={`px-3 py-2 text-sm transition-colors ${
-              statusFilter === 'completed' 
+              taskFilters.status === 'completed' 
                 ? 'bg-zinc-700 text-green-400' 
                 : 'bg-zinc-800 text-zinc-400 hover:text-white'
             }`}
@@ -703,10 +707,9 @@ const TasksPage: React.FC<TasksPageProps> = ({ onAskQuestion }) => {
             Completed
           </button>
           <button
-            onClick={() => setStatusFilter('archived')}
-            className={`px-3 py-2 text-sm rounde
-d-r-lg transition-colors ${
-              statusFilter === 'archived' 
+            onClick={() => setTaskStatusFilter('archived')}
+            className={`px-3 py-2 text-sm rounded-r-lg transition-colors ${
+              taskFilters.status === 'archived' 
                 ? 'bg-zinc-700 text-zinc-300' 
                 : 'bg-zinc-800 text-zinc-400 hover:text-white'
             }`}
@@ -714,261 +717,186 @@ d-r-lg transition-colors ${
             Archived
           </button>
         </div>
-        
-        {/* Filters Panel */}
-        {showTasksFilters && (
+
+        {showTaskFilters && (
           <FilterPanel
             title="Filter Tasks"
-            activeTags={filterTags}
-            onRemoveTag={handleRemoveTag}
-            onClearAll={clearFilters}
           >
-            {/* Urgent Toggle */}
-            <div>
-              <div className="flex items-center mb-2">
-                <h3 className="text-sm font-medium flex items-center flex-1">
-                  <AlertTriangle size={14} className="mr-2 text-red-400" />
-                  Urgency
-                </h3>
-                <button
-                  onClick={() => setUrgentOnly(!urgentOnly)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    urgentOnly ? 'bg-red-600' : 'bg-zinc-700'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      urgentOnly ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              <p className="text-xs text-zinc-500">
-                {urgentOnly ? 'Showing urgent tasks only' : 'Showing all tasks'}
-              </p>
-            </div>
-            
-            {/* Impact Filter */}
-            <div>
-              <h3 className="text-sm font-medium mb-2 flex items-center">
-                <ChevronUp size={14} className="mr-2 text-yellow-400" />
-                Impact
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedImpact('')}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedImpact === ''
-                      ? 'bg-zinc-700 text-white'
-                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setSelectedImpact('High')}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedImpact === 'High'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
-                  }`}
-                >
-                  High
-                </button>
-                <button
-                  onClick={() => setSelectedImpact('Medium')}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedImpact === 'Medium'
-                      ? 'bg-yellow-600 text-white'
-                      : 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
-                  }`}
-                >
-                  Medium
-                </button>
-                <button
-                  onClick={() => setSelectedImpact('Low')}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedImpact === 'Low'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'
-                  }`}
-                >
-                  Low
-                </button>
-              </div>
-            </div>
-            
             {/* Project Filter */}
             <div>
               <h3 className="text-sm font-medium mb-2 flex items-center">
                 <Briefcase size={14} className="mr-2 text-blue-400" />
                 Project
               </h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedProjectId('')}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedProjectId === ''
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  All Projects
-                </button>
-                <button
-                  onClick={() => setSelectedProjectId('uncategorized')}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedProjectId === 'uncategorized'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  Uncategorized
-                </button>
-                {availableProjects.map(project => (
-                  <button
-                    key={project.id}
-                    onClick={() => setSelectedProjectId(project.id)}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                      selectedProjectId === project.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {project.title}
-                  </button>
+              <select
+                value={taskFilters.selectedProjectId}
+                onChange={(e) => setTaskProjectFilter(e.target.value)}
+                className="w-full bg-zinc-800 rounded-lg px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={!!taskFilters.selectedMilestoneId}
+              >
+                {taskFilters.selectedMilestoneId ? (
+                  <option value={milestones.find(m => m.id === taskFilters.selectedMilestoneId)?.projectId || ''}>
+                    {projects.find(p => p.id === milestones.find(m => m.id === taskFilters.selectedMilestoneId)?.projectId)?.title || 'Unknown'}
+                  </option>
+                ) : (
+                  <>
+                    <option value="">All Projects</option>
+                    <option value="uncategorized">Uncategorized</option>
+                    {projects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        {project.title}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* Milestone Filter */}
+            <div>
+              <h3 className="text-sm font-medium mb-2 flex items-center">
+                <Target size={14} className="mr-2 text-purple-400" />
+                Milestone
+              </h3>
+              <select
+                value={taskFilters.selectedMilestoneId || ''}
+                onChange={(e) => setTaskMilestoneFilter(e.target.value || null)}
+                disabled={taskFilters.selectedProjectId === 'uncategorized'}
+                className={`w-full bg-zinc-800 rounded-lg px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                  taskFilters.selectedProjectId === 'uncategorized' ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <option value="">All Milestones</option>
+                {availableMilestones.map(milestone => (
+                  <option key={milestone.id} value={milestone.id}>
+                    {milestone.title}
+                  </option>
                 ))}
+              </select>
+              {taskFilters.selectedProjectId === 'uncategorized' && (
+                <p className="text-xs text-zinc-500 mt-1">Milestone filter is disabled for uncategorized tasks</p>
+              )}
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <h3 className="text-sm font-medium mb-2 flex items-center">
+                <CheckCircle2 size={14} className="mr-2 text-green-400" />
+                Status
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setTaskStatusFilter('pending')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    taskFilters.status === 'pending'
+                      ? 'bg-zinc-700 text-white'
+                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Pending
+                </button>
+                <button
+                  onClick={() => setTaskStatusFilter('completed')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    taskFilters.status === 'completed'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Completed
+                </button>
+                <button
+                  onClick={() => setTaskStatusFilter('incomplete')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    taskFilters.status === 'incomplete'
+                      ? 'bg-zinc-700 text-white'
+                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Incomplete
+                </button>
               </div>
             </div>
-            
-            {/* Milestone Filter - Only show if a project is selected */}
-            {selectedProjectId && selectedProjectId !== 'uncategorized' && availableMilestones.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium mb-2 flex items-center">
-                  <Target size={14} className="mr-2 text-purple-400" />
-                  Milestone
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setSelectedMilestoneId('')}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                      selectedMilestoneId === ''
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    All Milestones
-                  </button>
-                  {availableMilestones.map(milestone => (
-                    <button
-                      key={milestone.id}
-                      onClick={() => setSelectedMilestoneId(milestone.id)}
-                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                        selectedMilestoneId === milestone.id
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      {milestone.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </FilterPanel>
         )}
-      </div>
-      
-      {/* Main content with split view */}
-      <div className="flex-1 overflow-hidden flex p-6 pt-0">
-        {/* Task List - Fixed width container */}
-        <div className="w-[600px] flex-shrink-0 overflow-y-auto pr-4">
-          <div className="space-y-3">
-            {sortedTasks.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-zinc-400 mb-2">No tasks found</p>
-                <p className="text-sm text-zinc-500">
-                  {filterTags.length > 0
-                    ? 'Try adjusting your filters'
-                    : statusFilter === 'archived'
-                    ? 'No archived tasks'
-                    : statusFilter === 'completed'
-                    ? 'No completed tasks'
-                    : 'Create your first task to get started'
-                  }
-                </p>
-              </div>
-            ) : (
-              sortedTasks.map(task => (
-                <div
-                  key={task.id}
-                  className={`cursor-pointer transition-all rounded-lg border ${
-                    selectedTaskId === task.id 
-                      ? 'bg-blue-500/5 border-blue-500/50' 
-                      : 'border-transparent hover:border-zinc-800 hover:bg-zinc-900/50'
-                  }`}
-                  onClick={() => setSelectedTaskId(task.id)}
-                >
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggle={toggleTask}
-                    onArchive={(statusFilter === 'archived') 
-                      ? undefined 
-                      : (id) => setShowArchiveConfirmation(id)}
-                    onUnarchive={(statusFilter === 'archived')
-                      ? unarchiveTask
-                      : undefined}
-                    onUpdateImpact={updateTaskImpact}
-                    onToggleUrgent={toggleTaskUrgent}
-                    onAskQuestion={onAskQuestion}
-                  />
+
+        {/* Main content with split view */}
+        <div className="flex gap-6">
+          {/* Task List - Fixed width container */}
+          <div className="w-[600px] flex-shrink-0">
+            <div className="space-y-4">
+              {filteredTasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-zinc-400">No tasks found</p>
+                  <p className="text-sm text-zinc-500 mt-2">Try adjusting your filters</p>
                 </div>
-              ))
-            )}
+              ) : (
+                <TaskList
+                  tasks={sortedTasks}
+                  selectedTaskId={selectedTaskId}
+                  onSelectTask={setSelectedTaskId}
+                  onToggleUrgent={toggleTaskUrgent}
+                  onToggleCompleted={toggleTask}
+                  onArchive={handleArchive}
+                  onUnarchive={(taskFilters.status === 'archived') ? unarchiveTask : undefined}
+                  onAskQuestion={onAskQuestion}
+                  onUpdateImpact={handleUpdateImpact}
+                />
+              )}
+            </div>
           </div>
-        </div>
-        
-        {/* Task Detail Panel - Flexible width */}
-        <div className="flex-1 border-l border-zinc-800 pl-4 flex flex-col overflow-hidden">
-          {selectedTask ? (
-            <TaskDetail
-              task={selectedTask}
-              projects={availableProjects}
-              milestones={milestones}
-              onSave={handleUpdateTask}
-              onToggleUrgent={toggleTaskUrgent}
-              onToggleCompleted={toggleTask}
-              onArchive={(id) => setShowArchiveConfirmation(id)}
-              onUnarchive={statusFilter === 'archived' ? unarchiveTask : undefined}
-              onAskQuestion={onAskQuestion}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-zinc-500">Select a task to view details</p>
+
+          {/* Task Detail Panel - Flexible width */}
+          {selectedTask && (
+            <div className="flex-1 border-l border-zinc-800 bg-zinc-950 rounded-lg overflow-hidden">
+              <TaskDetail
+                task={selectedTask}
+                projects={projects}
+                milestones={milestones}
+                onSave={handleUpdateTask}
+                onToggleUrgent={toggleTaskUrgent}
+                onToggleCompleted={toggleTask}
+                onArchive={(id) => {
+                  const task = tasks.find(t => t.id === id);
+                  if (task) {
+                    setTaskToArchive(task);
+                    setShowArchiveConfirm(true);
+                  }
+                }}
+                onUnarchive={(taskFilters.status === 'archived') ? unarchiveTask : undefined}
+                onAskQuestion={onAskQuestion}
+              />
             </div>
           )}
         </div>
       </div>
-      
-      {/* Task Modal for adding/editing */}
+
+      {/* Task Modal */}
       {showTaskModal && (
         <TaskModal
-          initialData={taskToEdit || undefined}
-          onClose={() => {
-            setShowTaskModal(false);
-            setTaskToEdit(null);
-          }}
+          projectId={taskFilters.selectedProjectId || undefined}
+          milestoneId={taskFilters.selectedMilestoneId || undefined}
+          onClose={handleCloseTaskModal}
+          initialData={editingTask}
         />
       )}
       
       {/* Archive Confirmation */}
-      {showArchiveConfirmation && (
+      {showArchiveConfirm && (
         <ConfirmationDialog
           message="Are you sure you want to archive this task? Archived tasks won't appear in your active tasks list."
           confirmText="Archive Task"
-          onConfirm={confirmArchiveTask}
-          onCancel={() => setShowArchiveConfirmation(null)}
+          onConfirm={() => {
+            if (taskToArchive) {
+              archiveTask(taskToArchive.id);
+              setShowArchiveConfirm(false);
+              setTaskToArchive(null);
+            }
+          }}
+          onCancel={() => {
+            setShowArchiveConfirm(false);
+            setTaskToArchive(null);
+          }}
         />
       )}
     </div>

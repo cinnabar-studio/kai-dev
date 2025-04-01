@@ -603,4 +603,4 @@ const DailyNote = () => {
   );
 };
 
-export default DailyNote;
+export { DailyNote };

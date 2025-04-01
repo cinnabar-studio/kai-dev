@@ -63,6 +63,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ projectId, milestoneId, onClose, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title.trim()) return;
+
     if (initialData?.id) {
       updateTask(initialData.id, {
         ...formData,
@@ -72,6 +74,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ projectId, milestoneId, onClose, 
       addTask({ 
         ...formData, 
         projectId: selectedProjectId || '',
+        description: formData.description || '',
+        deadline: formData.deadline || undefined,
+        milestoneId: formData.milestoneId || null,
       });
     }
     onClose();

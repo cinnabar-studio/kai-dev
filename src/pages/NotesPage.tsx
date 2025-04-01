@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, 
   Filter, 
@@ -26,7 +26,7 @@ import { useNotesStore, type NoteTag, type PredefinedTag } from '../store/notesS
 import { useGoalsStore } from '../store/goalsStore';
 import NoteModal from '../components/modals/NoteModal';
 import ConfirmationDialog from '../components/ConfirmationDialog';
-import FilterSortBar from '../components/FilterSortBar';
+import { FilterBar } from '../components/FilterBar';
 import FilterPanel from '../components/FilterPanel';
 
 const TAG_COLORS: Record<string, string> = {
@@ -78,7 +78,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
   onArchive,
   onAskQuestion,
 }) => {
-  const [expanded, setExpanded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAskQuestion, setShowAskQuestion] = useState(false);
   const [question, setQuestion] = useState('');
@@ -87,8 +86,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
   const project = projectId ? projects.find(p => p.id === projectId) : undefined;
   const milestone = milestoneId ? milestones.find(m => m.id === milestoneId) : undefined;
   
-  const toggleExpand = () => {
-    setExpanded(!expanded);
+  // Add useEffect to handle updates
+  useEffect(() => {
+    // This will force a re-render when the note data changes
+  }, [id, title, content, tags, projectId, milestoneId, createdAt, updatedAt, pinned]);
+  
+  const truncateText = (text: string, maxLength: number = 60) => {
+    if (!text || text.length <= maxLength) return text;
+    return `${text.substring(0, maxLength)}...`;
   };
   
   const handleAskQuestion = () => {
@@ -122,28 +127,21 @@ const NoteItem: React.FC<NoteItemProps> = ({
   };
   
   return (
-    <div className="bg-zinc-900 rounded-lg overflow-hidden hover:bg-zinc-800 transition-colors border border-transparent hover:border-zinc-700">
+    <div 
+      className="bg-zinc-900 rounded-lg overflow-hidden hover:bg-zinc-800 transition-colors border border-transparent hover:border-zinc-700 cursor-pointer"
+      onClick={() => onEdit()}
+    >
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 cursor-pointer" onClick={toggleExpand}>
+          <div className="flex-1">
             <div className="flex items-center gap-2">
               {pinned && (
                 <Pin size={14} className="text-orange-500 flex-shrink-0" />
               )}
-              <h3 className="font-medium">{title}</h3>
+              <h3 className="font-medium truncate">{truncateText(title)}</h3>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <button
-              onClick={toggleExpand}
-              className="p-1.5 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white"
-            >
-              {expanded ? (
-                <ChevronUp size={16} />
-              ) : (
-                <ChevronDown size={16} />
-              )}
-            </button>
             <div className="relative">
               <button
                 onClick={toggleMenu}
@@ -211,81 +209,32 @@ const NoteItem: React.FC<NoteItemProps> = ({
         </div>
         
         {/* Preview Content */}
-        {!expanded && (
-          <p className="text-sm text-zinc-400 line-clamp-2">
-            {content}
-          </p>
-        )}
+        <p className="text-sm text-zinc-400 line-clamp-2">
+          {truncateText(content, 150)}
+        </p>
         
-        {/* Full Content when expanded */}
-        {expanded && (
-          <div className="mt-2 space-y-4">
-            <div className="whitespace-pre-wrap text-sm text-zinc-300">
-              {content}
-            </div>
-            
-            {/* Project/Milestone Info */}
-            {(project || milestone) && (
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                {project && (
-                  <div className="flex items-center space-x-1 px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded">
-                    <Briefcase size={12} />
-                    <span>{project.title}</span>
-                  </div>
-                )}
-                {milestone && (
-                  <div className="flex items-center space-x-1 px-2 py-0.5 bg-purple-500/10 text-purple-400 rounded">
-                    <Target size={12} />
-                    <span>{milestone.title}</span>
-                  </div>
-                )}
+        {/* Project/Milestone Info */}
+        {(project || milestone) && (
+          <div className="flex flex-wrap items-center gap-2 text-sm mt-3">
+            {project && (
+              <div className="flex items-center space-x-1 px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded">
+                <Briefcase size={12} />
+                <span>{project.title}</span>
               </div>
             )}
-            
-            {/* Ask AI Section */}
-            <div className="pt-3 mt-3 border-t border-zinc-800">
-              {showAskQuestion ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                    placeholder="Ask AI about this note..."
-                    className="w-full bg-zinc-800 rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    rows={2}
-                  />
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => setShowAskQuestion(false)}
-                      className="px-3 py-1 text-sm text-zinc-400"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleAskQuestion}
-                      disabled={!question.trim()}
-                      className="px-3 py-1 bg-orange-500 text-white rounded-lg text-sm disabled:opacity-50"
-                    >
-                      Ask
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowAskQuestion(true)}
-                  className="flex items-center space-x-1 text-sm text-orange-400 hover:text-orange-300"
-                >
-                  <MessageSquare size={14} />
-                  <span>Ask AI about this note</span>
-                </button>
-              )}
-            </div>
+            {milestone && (
+              <div className="flex items-center space-x-1 px-2 py-0.5 bg-purple-500/10 text-purple-400 rounded">
+                <Target size={12} />
+                <span>{milestone.title}</span>
+              </div>
+            )}
           </div>
         )}
         
         {/* Tags and Date */}
         <div className="flex items-center justify-between mt-3 flex-wrap gap-y-2">
           <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
+            {tags.slice(0, 2).map(tag => (
               <div
                 key={tag}
                 className={`flex items-center space-x-1 px-2 py-0.5 rounded ${getTagColor(tag)}`}
@@ -298,6 +247,12 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 <span className="text-xs">{tag}</span>
               </div>
             ))}
+            {tags.length > 2 && (
+              <div className="flex items-center space-x-1 px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                <Tag size={12} />
+                <span className="text-xs">+{tags.length - 2} more</span>
+              </div>
+            )}
           </div>
           <span className="text-xs text-zinc-500">{formattedDate}</span>
         </div>
@@ -334,7 +289,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ onAskQuestion }) => {
   const { projects, milestones, getMilestonesByProject } = useGoalsStore();
   const availableProjects = projects.filter(p => !p.archived);
   
-  const [showNotesFilters, setShowNotesFilters] = useState(true); // Set to true by default to show filters
+  const [showNoteFilters, setShowNoteFilters] = useState(false);
   const [showSortOptions, setShowSortOptions] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [noteToEdit, setNoteToEdit] = useState<string | null>(null);
@@ -343,6 +298,11 @@ const NotesPage: React.FC<NotesPageProps> = ({ onAskQuestion }) => {
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('');
   const [availableMilestones, setAvailableMilestones] = useState<Array<{ id: string; title: string }>>([]);
   
+  // Add useEffect to handle note updates
+  useEffect(() => {
+    // This will force a re-render when notes change
+  }, [notes]);
+
   // Update available milestones when selected project changes
   useEffect(() => {
     if (selectedProjectId && selectedProjectId !== 'uncategorized') {
@@ -359,33 +319,39 @@ const NotesPage: React.FC<NotesPageProps> = ({ onAskQuestion }) => {
         }
       }
     } else {
-      setAvailableMilestones([]);
-      setSelectedMilestoneId('');
+      // Show all non-archived milestones when no project is selected
+      const allMilestones = milestones
+        .filter(m => !m.archived)
+        .map(m => ({ id: m.id, title: m.title }));
+      setAvailableMilestones(allMilestones);
     }
-  }, [selectedProjectId, getMilestonesByProject, selectedMilestoneId]);
+  }, [selectedProjectId, getMilestonesByProject, selectedMilestoneId, milestones]);
 
-  const filteredNotes = getFilteredNotes().filter(note => {
-    // Additional filter for milestone
-    if (selectedMilestoneId && note.milestoneId !== selectedMilestoneId) {
-      return false;
-    }
-    return true;
-  });
+  const filteredNotes = useMemo(() => {
+    const baseFiltered = getFilteredNotes();
+    return baseFiltered.filter(note => {
+      if (selectedMilestoneId && note.milestoneId !== selectedMilestoneId) {
+        return false;
+      }
+      return true;
+    });
+  }, [getFilteredNotes, selectedMilestoneId, notes, searchTerm, selectedTags, selectedProjectId, filteredView]);
   
-  const allTags = getAllTags();
+  const allTags = useMemo(() => getAllTags(), [getAllTags, notes, searchTerm, selectedTags, selectedProjectId, filteredView]);
   
-  // Sort the notes
-  const sortedNotes = [...filteredNotes].sort((a, b) => {
-    if (sortBy === 'newest') {
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    } else if (sortBy === 'oldest') {
-      return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-    } else if (sortBy === 'az') {
-      return a.title.localeCompare(b.title);
-    } else {
-      return b.title.localeCompare(a.title);
-    }
-  });
+  const sortedNotes = useMemo(() => {
+    return [...filteredNotes].sort((a, b) => {
+      if (sortBy === 'newest') {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      } else if (sortBy === 'oldest') {
+        return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      } else if (sortBy === 'az') {
+        return a.title.localeCompare(b.title);
+      } else {
+        return b.title.localeCompare(a.title);
+      }
+    });
+  }, [filteredNotes, sortBy, notes, searchTerm, selectedTags, selectedProjectId, filteredView]);
   
   const handleEditNote = (noteId: string) => {
     setNoteToEdit(noteId);
@@ -443,8 +409,8 @@ const NotesPage: React.FC<NotesPageProps> = ({ onAskQuestion }) => {
     filterTags.push({
       id: 'project',
       label: selectedProjectId === 'uncategorized' ? 
-        'Uncategorized' : 
-        availableProjects.find(p => p.id === selectedProjectId)?.title || 'Unknown',
+        'Project: Uncategorized' : 
+        `Project: ${availableProjects.find(p => p.id === selectedProjectId)?.title || 'Unknown'}`,
       color: 'bg-blue-600/20 text-blue-400',
       icon: <Briefcase size={14} className="flex-shrink-0" />
     });
@@ -478,29 +444,151 @@ const NotesPage: React.FC<NotesPageProps> = ({ onAskQuestion }) => {
   return (
     <div className="flex-1 overflow-y-auto p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">Notes</h1>
         <div className="flex items-center space-x-3">
-          <FilterSortBar
+          <FilterBar
             searchPlaceholder="Search notes..."
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             sortOptions={sortOptions}
             currentSortOption={sortBy}
             onSortChange={(option) => setSortBy(option as 'newest' | 'oldest' | 'az' | 'za')}
-            isFilterActive={showNotesFilters || filterTags.length > 0}
-            onToggleFilters={() => setShowNotesFilters(!showNotesFilters)}
+            filterTags={filterTags}
+            onRemoveTag={handleRemoveTag}
+            onClearAll={clearFilters}
+            onToggleFilters={() => setShowNoteFilters(!showNoteFilters)}
+            isFiltersOpen={showNoteFilters}
           >
             <button 
-              onClick={() => setShowAddNoteModal(true)}
+              onClick={() => {
+                setNoteToEdit(null);
+                setShowAddNoteModal(true);
+              }}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center space-x-2 transition-colors"
             >
               <Plus size={18} />
               <span>Add Note</span>
             </button>
-          </FilterSortBar>
+          </FilterBar>
         </div>
       </div>
+      
+      {/* Active Filters */}
+      {filterTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {filterTags.map((tag) => (
+            <span
+              key={tag.id}
+              className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${tag.color}`}
+            >
+              {tag.icon}
+              {tag.label}
+              <button
+                onClick={() => handleRemoveTag(tag.id)}
+                className="hover:text-white"
+              >
+                <X size={14} />
+              </button>
+            </span>
+          ))}
+          <button
+            onClick={clearFilters}
+            className="text-xs text-zinc-400 hover:text-white px-2 py-1"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {showNoteFilters && (
+        <FilterPanel title="Filter Notes">
+          {/* Project Filter */}
+          <div>
+            <h3 className="text-sm font-medium mb-2 flex items-center">
+              <Briefcase size={14} className="mr-2 text-blue-400" />
+              Project
+            </h3>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full bg-zinc-800 rounded-lg px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!!selectedMilestoneId}
+            >
+              {selectedMilestoneId ? (
+                <option value={milestones.find(m => m.id === selectedMilestoneId)?.projectId || ''}>
+                  {availableProjects.find(p => p.id === milestones.find(m => m.id === selectedMilestoneId)?.projectId)?.title || 'Unknown'}
+                </option>
+              ) : (
+                <>
+                  <option value="">All Projects</option>
+                  <option value="uncategorized">Uncategorized</option>
+                  {availableProjects.map(project => (
+                    <option key={project.id} value={project.id}>
+                      {project.title}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          </div>
+          
+          {/* Milestone Filter */}
+          <div>
+            <h3 className="text-sm font-medium mb-2 flex items-center">
+              <Target size={14} className="mr-2 text-purple-400" />
+              Milestone
+            </h3>
+            <select
+              value={selectedMilestoneId}
+              onChange={(e) => setSelectedMilestoneId(e.target.value)}
+              disabled={selectedProjectId === 'uncategorized'}
+              className={`w-full bg-zinc-800 rounded-lg px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                selectedProjectId === 'uncategorized' ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <option value="">All Milestones</option>
+              {availableMilestones.map(milestone => (
+                <option key={milestone.id} value={milestone.id}>
+                  {milestone.title}
+                </option>
+              ))}
+            </select>
+            {selectedProjectId === 'uncategorized' && (
+              <p className="text-xs text-zinc-500 mt-1">Milestone filter is disabled for uncategorized notes</p>
+            )}
+          </div>
+          
+          {/* Tags Filter */}
+          <div>
+            <h3 className="text-sm font-medium mb-2 flex items-center">
+              <Tag size={14} className="mr-2 text-green-400" />
+              Tags
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {allTags.map(({ tag, count }) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded-lg transition-colors ${
+                    selectedTags.includes(tag)
+                      ? getTagColor(tag)
+                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {tag === 'checklist' ? (
+                    <CheckSquare size={14} />
+                  ) : (
+                    <Tag size={14} />
+                  )}
+                  <span className="text-sm">{tag}</span>
+                  <span className="text-xs opacity-70">({count})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </FilterPanel>
+      )}
       
       {/* View Tabs */}
       <div className="flex mb-4">
@@ -538,123 +626,6 @@ const NotesPage: React.FC<NotesPageProps> = ({ onAskQuestion }) => {
           <span className="hidden sm:inline">Archived</span>
         </button>
       </div>
-
-      {/* Advanced Filters Panel */}
-      {showNotesFilters && (
-        <FilterPanel
-          title="Filter Notes"
-          activeTags={filterTags}
-          onRemoveTag={handleRemoveTag}
-          onClearAll={clearFilters}
-        >
-          {/* Project Filter */}
-          <div>
-            <h3 className="text-sm font-medium mb-2 flex items-center">
-              <Briefcase size={14} className="mr-2 text-blue-400" />
-              Project
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedProjectId('')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  selectedProjectId === ''
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                }`}
-              >
-                All Projects
-              </button>
-              <button
-                onClick={() => setSelectedProjectId('uncategorized')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  selectedProjectId === 'uncategorized'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                }`}
-              >
-                Uncategorized
-              </button>
-              {availableProjects.map(project => (
-                <button
-                  key={project.id}
-                  onClick={() => setSelectedProjectId(project.id)}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedProjectId === project.id
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {project.title}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Milestone Filter */}
-          {selectedProjectId && selectedProjectId !== 'uncategorized' && availableMilestones.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium mb-2 flex items-center">
-                <Target size={14} className="mr-2 text-purple-400" />
-                Milestone
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedMilestoneId('')}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    selectedMilestoneId === ''
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  All Milestones
-                </button>
-                {availableMilestones.map(milestone => (
-                  <button
-                    key={milestone.id}
-                    onClick={() => setSelectedMilestoneId(milestone.id)}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                      selectedMilestoneId === milestone.id
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {milestone.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Tags Filter */}
-          <div>
-            <h3 className="text-sm font-medium mb-2 flex items-center">
-              <Tag size={14} className="mr-2 text-green-400" />
-              Tags
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {allTags.map(({ tag, count }) => (
-                <button
-                  key={tag}
-                  onClick={() => toggleTag(tag)}
-                  className={`flex items-center space-x-1 px-2 py-1 rounded-lg transition-colors ${
-                    selectedTags.includes(tag)
-                      ? getTagColor(tag)
-                      : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {tag === 'checklist' ? (
-                    <CheckSquare size={14} />
-                  ) : (
-                    <Tag size={14} />
-                  )}
-                  <span className="text-sm">{tag}</span>
-                  <span className="text-xs opacity-70">({count})</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </FilterPanel>
-      )}
       
       {/* Notes List */}
       {sortedNotes.length === 0 ? (
@@ -675,7 +646,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ onAskQuestion }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedNotes.map(note => (
             <NoteItem
-              key={note.id}
+              key={`${note.id}-${note.updatedAt}`}
               {...note}
               onPin={() => togglePinned(note.id)}
               onEdit={() => handleEditNote(note.id)}

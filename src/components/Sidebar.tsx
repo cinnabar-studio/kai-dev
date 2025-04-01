@@ -28,7 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
   const unreadFeedCount = feedItems.filter(item => !item.read).length;
 
   return (
-    <div className="w-16 bg-[#0A0A0A] border-r border-zinc-800 flex flex-col items-center py-4">
+    <div className="w-16 bg-[#0A0A0A] border-r border-zinc-800 flex flex-col items-center py-4 fixed top-0 left-0 h-screen">
       <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center mb-8">
         <span className="text-black font-bold">LM</span>
       </div>
@@ -147,4 +147,4 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
   );
 };
 
-export default Sidebar;
+export { Sidebar };

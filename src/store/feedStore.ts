@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { useGoalsStore } from './goalsStore';
+import { create, StateCreator } from 'zustand';
+import { useGoalsStore, type Goal, type Project } from './goalsStore';
 
 export type FeedTag = 'innovation' | 'growth' | 'productivity' | 'leadership' | 'technology' | 'mindfulness' | 'strategy';
 
@@ -19,9 +19,27 @@ export interface FeedItem {
   defaultQuestions: string[];
 }
 
-interface FeedStore {
+interface FeedState {
   feedItems: FeedItem[];
   bookmarkedItems: Set<string>;
+  filterStatus: 'all' | 'read' | 'unread';
+  searchTerm: string;
+  selectedProject: string;
+  selectedGoal: string;
+  showBookmarks: boolean;
+  sortBy: 'newest' | 'oldest' | 'az' | 'za';
+  
+  // Actions
+  setFilterStatus: (status: 'all' | 'read' | 'unread') => void;
+  setSearchTerm: (term: string) => void;
+  setSelectedProject: (project: string) => void;
+  setSelectedGoal: (goal: string) => void;
+  setShowBookmarks: (show: boolean) => void;
+  setSortBy: (sort: 'newest' | 'oldest' | 'az' | 'za') => void;
+  clearFilters: () => void;
+}
+
+interface FeedStore extends FeedState {
   toggleBookmark: (id: string) => void;
   isBookmarked: (id: string) => boolean;
   getBookmarkedItems: () => FeedItem[];
@@ -30,6 +48,7 @@ interface FeedStore {
   toggleRead: (id: string) => void;
   filterByReadStatus: (status: 'all' | 'read' | 'unread', items: FeedItem[]) => FeedItem[];
   getAvailableProjects: () => { project: string; goal: string }[];
+  getFilteredItems: () => FeedItem[];
 }
 
 export const useFeedStore = create<FeedStore>((set, get) => ({
@@ -93,8 +112,31 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
     },
   ],
   bookmarkedItems: new Set<string>(),
+  filterStatus: 'all',
+  searchTerm: '',
+  selectedProject: 'All',
+  selectedGoal: 'All',
+  showBookmarks: false,
+  sortBy: 'newest',
+  
+  // Actions
+  setFilterStatus: (status) => set({ filterStatus: status }),
+  setSearchTerm: (term) => set({ searchTerm: term }),
+  setSelectedProject: (project) => set({ selectedProject: project }),
+  setSelectedGoal: (goal) => set({ selectedGoal: goal }),
+  setShowBookmarks: (show) => set({ showBookmarks: show }),
+  setSortBy: (sort) => set({ sortBy: sort }),
+  clearFilters: () => set({
+    filterStatus: 'all',
+    searchTerm: '',
+    selectedProject: 'All',
+    selectedGoal: 'All',
+    showBookmarks: false,
+    sortBy: 'newest'
+  }),
+  
   toggleBookmark: (id: string) =>
-    set((state) => {
+    set((state: FeedState) => {
       const newBookmarkedItems = new Set(state.bookmarkedItems);
       if (newBookmarkedItems.has(id)) {
         newBookmarkedItems.delete(id);
@@ -103,49 +145,73 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
       }
       return { bookmarkedItems: newBookmarkedItems };
     }),
+    
   isBookmarked: (id: string) => get().bookmarkedItems.has(id),
+  
   getBookmarkedItems: () => {
     const { feedItems, bookmarkedItems } = get();
-    return feedItems.filter((item) => bookmarkedItems.has(item.id));
+    return feedItems.filter((item: FeedItem) => bookmarkedItems.has(item.id));
   },
+  
   filterByProject: (project: string) => {
     const { feedItems } = get();
     return project === 'All'
       ? feedItems
-      : feedItems.filter((item) => item.project === project);
+      : feedItems.filter((item: FeedItem) => item.project === project);
   },
+  
   filterByGoal: (goal: string) => {
     const { feedItems } = get();
     return goal === 'All'
       ? feedItems
-      : feedItems.filter((item) => item.goal === goal);
+      : feedItems.filter((item: FeedItem) => item.goal === goal);
   },
+  
   toggleRead: (id: string) =>
-    set((state) => ({
-      feedItems: state.feedItems.map((item) =>
+    set((state: FeedState) => ({
+      feedItems: state.feedItems.map((item: FeedItem) =>
         item.id === id ? { ...item, read: !item.read } : item
       ),
     })),
+    
   filterByReadStatus: (status: 'all' | 'read' | 'unread', items: FeedItem[]) => {
     if (status === 'all') return items;
-    return items.filter((item) => status === 'read' ? item.read : !item.read);
+    return items.filter((item: FeedItem) => status === 'read' ? item.read : !item.read);
   },
+  
   getAvailableProjects: () => {
     const { goals, projects } = useGoalsStore.getState();
-    const result: { project: string; goal: string }[] = [];
     
-    goals.forEach(goal => {
-      if (goal.archived) return;
+    // Create a map of goal IDs to titles for faster lookups
+    const goalMap = new Map(goals.map((goal: Goal) => [goal.id, goal.title]));
+    
+    return projects
+      .filter((p: Project) => !p.archived)
+      .map((project: Project) => ({
+        project: project.title,
+        goal: goalMap.get(project.goalId) || 'Unknown Goal'
+      }));
+  },
+  
+  getFilteredItems: () => {
+    const { feedItems, filterStatus, searchTerm } = get();
+    
+    return feedItems.filter((item: FeedItem) => {
+      // Filter by read status
+      if (filterStatus !== 'all' && item.read !== (filterStatus === 'read')) {
+        return false;
+      }
       
-      const goalProjects = projects.filter(p => p.goalId === goal.id && !p.archived);
-      goalProjects.forEach(project => {
-        result.push({
-          project: project.title,
-          goal: goal.title
-        });
-      });
+      // Filter by search term
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          item.title.toLowerCase().includes(searchLower) ||
+          item.summary.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      return true;
     });
-    
-    return result;
   }
 }));

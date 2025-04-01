@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { Bot, X } from 'lucide-react';
-import Sidebar from './components/Sidebar';
-import DailyNote from './components/DailyNote';
+import React, { useState, Suspense } from 'react';
+import { Bot, X, MessageSquare } from 'lucide-react';
+import { Sidebar } from './components/Sidebar';
+import { Chat } from './components/Chat';
+import { DailyNote } from './components/DailyNote';
 import FeedPage from './pages/FeedPage';
-import NotesPage from './pages/NotesPage';
-import TasksPage from './pages/TasksPage';
 import GoalsPanel from './components/GoalsPanel';
-import Chat from './components/Chat';
+
+// Lazy load components
+const NotesPage = React.lazy(() => import('./pages/NotesPage'));
+const TasksPage = React.lazy(() => import('./pages/TasksPage'));
 
 export type Page = 'home' | 'feed' | 'goals' | 'notes' | 'tasks';
 
@@ -17,6 +19,13 @@ export interface ChatState {
     question: string;
   };
 }
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+  </div>
+);
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -81,7 +90,9 @@ function App() {
     return (
       <div className="flex h-screen bg-[#0A0A0A] text-white">
         <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-        <FeedPage onPageChange={setCurrentPage} onAskQuestion={handleAskQuestion} />
+        <div className="flex-1 ml-16">
+          <FeedPage onPageChange={setCurrentPage} onAskQuestion={handleAskQuestion} />
+        </div>
         {renderChatButton()}
         {renderChatWindow()}
       </div>
@@ -92,7 +103,7 @@ function App() {
     return (
       <div className="flex h-screen bg-[#0A0A0A] text-white">
         <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col ml-16">
           <GoalsPanel />
         </div>
         {renderChatButton()}
@@ -105,8 +116,10 @@ function App() {
     return (
       <div className="flex h-screen bg-[#0A0A0A] text-white">
         <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-        <div className="flex-1 flex flex-col">
-          <NotesPage onAskQuestion={handleAskQuestion} />
+        <div className="flex-1 flex flex-col ml-16">
+          <Suspense fallback={<LoadingFallback />}>
+            <NotesPage onAskQuestion={handleAskQuestion} />
+          </Suspense>
         </div>
         {renderChatButton()}
         {renderChatWindow()}
@@ -118,8 +131,10 @@ function App() {
     return (
       <div className="flex h-screen bg-[#0A0A0A] text-white">
         <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-        <div className="flex-1 flex flex-col">
-          <TasksPage onAskQuestion={handleAskQuestion} />
+        <div className="flex-1 flex flex-col ml-16">
+          <Suspense fallback={<LoadingFallback />}>
+            <TasksPage onAskQuestion={handleAskQuestion} />
+          </Suspense>
         </div>
         {renderChatButton()}
         {renderChatWindow()}
@@ -130,8 +145,10 @@ function App() {
   return (
     <div className="flex h-screen bg-[#0A0A0A] text-white">
       <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-      <main className="flex-1 flex">
-        <DailyNote />
+      <main className="flex-1 flex ml-16">
+        <Suspense fallback={<LoadingFallback />}>
+          <DailyNote />
+        </Suspense>
         {renderChatButton()}
         {renderChatWindow()}
       </main>

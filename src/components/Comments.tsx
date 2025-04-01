@@ -31,6 +31,7 @@ const Comments: React.FC<CommentsProps> = ({ entityId, entityType }) => {
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={`Comment on this ${entityType}...`}
             className="flex-1 bg-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            maxLength={500}
           />
           <button
             type="submit"
@@ -57,7 +58,7 @@ const Comments: React.FC<CommentsProps> = ({ entityId, entityType }) => {
                     {new Date(comment.createdAt).toLocaleTimeString()}
                   </span>
                 </div>
-                <p className="text-sm text-zinc-300">{comment.content}</p>
+                <p className="text-sm text-zinc-300 break-words">{comment.content}</p>
               </div>
             ))
         )}

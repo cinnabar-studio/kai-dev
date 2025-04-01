@@ -58,6 +58,15 @@ interface GoalsStore {
   projects: Project[];
   milestones: Milestone[];
   tasks: Task[];
+  taskFilters: {
+    status: 'pending' | 'completed' | 'archived' | 'incomplete';
+    urgentOnly: boolean;
+    selectedImpact: ImpactLevel | null;
+    selectedProjectId: string;
+    selectedMilestoneId: string | null;
+    searchTerm: string;
+    sortBy: 'newest' | 'oldest' | 'priority' | 'deadline';
+  };
   
   // Goal actions
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>) => void;
@@ -105,6 +114,16 @@ interface GoalsStore {
   getTasksByMilestone: (milestoneId: string) => Task[];
   getUncategorizedTasksByProject: (projectId: string) => Task[];
   getGlobalUncategorizedTasks: () => Task[];
+  
+  // Task filter actions
+  setTaskStatusFilter: (status: 'pending' | 'completed' | 'archived' | 'incomplete') => void;
+  setTaskUrgentFilter: (urgent: boolean) => void;
+  setTaskImpactFilter: (impact: ImpactLevel | null) => void;
+  setTaskProjectFilter: (projectId: string) => void;
+  setTaskMilestoneFilter: (milestoneId: string | null) => void;
+  setTaskSearchTerm: (term: string) => void;
+  setTaskSortBy: (sort: 'newest' | 'oldest' | 'priority' | 'deadline') => void;
+  clearTaskFilters: () => void;
 }
 
 export const useGoalsStore = create<GoalsStore>((set, get) => ({
@@ -165,6 +184,16 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
     },
   ],
 
+  taskFilters: {
+    status: 'pending',
+    urgentOnly: false,
+    selectedImpact: null,
+    selectedProjectId: '',
+    selectedMilestoneId: null,
+    searchTerm: '',
+    sortBy: 'newest'
+  },
+
   // Goal actions
   addGoal: (goal) => set((state) => ({
     goals: [...state.goals, { ...goal, id: crypto.randomUUID(), createdAt: new Date().toISOString() }],
@@ -202,23 +231,25 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
     ],
   })),
 
-  updateProject: (id, updates) => set((state) => ({
-    projects: state.projects.map((project) =>
-      project.id === id
-        ? {
-            ...project,
-            ...updates,
-            results: updates.results !== undefined 
-              ? updates.results.map(r => ({
-                  ...r,
-                  progress: project.results.find(pr => pr.id === r.id)?.progress || 0,
-                  checkIns: project.results.find(pr => pr.id === r.id)?.checkIns || [],
-                }))
-              : project.results,
-          }
-        : project
-    ),
-  })),
+  updateProject: (id, updates) => set((state) => {
+    const projectIndex = state.projects.findIndex(p => p.id === id);
+    if (projectIndex === -1) return state;
+    
+    const newProjects = [...state.projects];
+    newProjects[projectIndex] = {
+      ...newProjects[projectIndex],
+      ...updates,
+      results: updates.results !== undefined 
+        ? updates.results.map(r => ({
+            ...r,
+            progress: newProjects[projectIndex].results.find(pr => pr.id === r.id)?.progress || 0,
+            checkIns: newProjects[projectIndex].results.find(pr => pr.id === r.id)?.checkIns || [],
+          }))
+        : newProjects[projectIndex].results,
+    };
+    
+    return { projects: newProjects };
+  }),
 
   archiveProject: (id) => set((state) => ({
     projects: state.projects.map((project) =>
@@ -341,11 +372,15 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
     }],
   })),
 
-  updateTask: (id, updates) => set((state) => ({
-    tasks: state.tasks.map((task) =>
-      task.id === id ? { ...task, ...updates } : task
-    ),
-  })),
+  updateTask: (id, updates) => set((state) => {
+    const taskIndex = state.tasks.findIndex(t => t.id === id);
+    if (taskIndex === -1) return state;
+    
+    const newTasks = [...state.tasks];
+    newTasks[taskIndex] = { ...newTasks[taskIndex], ...updates };
+    
+    return { tasks: newTasks };
+  }),
 
   toggleTask: (id) => set((state) => {
     const task = state.tasks.find(t => t.id === id);
@@ -427,4 +462,38 @@ export const useGoalsStore = create<GoalsStore>((set, get) => ({
     const { tasks } = get();
     return tasks.filter(t => !t.projectId && !t.milestoneId && !t.archived);
   },
+
+  // Task filter actions
+  setTaskStatusFilter: (status) => set((state) => ({
+    taskFilters: { ...state.taskFilters, status }
+  })),
+  setTaskUrgentFilter: (urgent) => set((state) => ({
+    taskFilters: { ...state.taskFilters, urgentOnly: urgent }
+  })),
+  setTaskImpactFilter: (impact) => set((state) => ({
+    taskFilters: { ...state.taskFilters, selectedImpact: impact }
+  })),
+  setTaskProjectFilter: (projectId) => set((state) => ({
+    taskFilters: { ...state.taskFilters, selectedProjectId: projectId }
+  })),
+  setTaskMilestoneFilter: (milestoneId) => set((state) => ({
+    taskFilters: { ...state.taskFilters, selectedMilestoneId: milestoneId }
+  })),
+  setTaskSearchTerm: (term) => set((state) => ({
+    taskFilters: { ...state.taskFilters, searchTerm: term }
+  })),
+  setTaskSortBy: (sort) => set((state) => ({
+    taskFilters: { ...state.taskFilters, sortBy: sort }
+  })),
+  clearTaskFilters: () => set((state) => ({
+    taskFilters: {
+      status: 'pending',
+      urgentOnly: false,
+      selectedImpact: null,
+      selectedProjectId: '',
+      selectedMilestoneId: null,
+      searchTerm: '',
+      sortBy: 'newest'
+    }
+  })),
 }));

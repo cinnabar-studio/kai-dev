@@ -116,19 +116,25 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ goalId, onClose, initialDat
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setResults((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
+    if (!over || active.id === over.id) return;
+    
+    setResults(items => {
+      const oldIndex = items.findIndex(item => item.id === active.id);
+      const newIndex = items.findIndex(item => item.id === over.id);
+      
+      if (oldIndex === -1 || newIndex === -1) return items;
+      
+      const newItems = [...items];
+      const [movedItem] = newItems.splice(oldIndex, 1);
+      newItems.splice(newIndex, 0, movedItem);
+      
+      return newItems;
+    });
   };
 
   const addResult = () => {
-    setResults([
-      ...results,
+    setResults(items => [
+      ...items,
       {
         id: crypto.randomUUID(),
         description: '',
@@ -137,13 +143,18 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ goalId, onClose, initialDat
   };
 
   const updateResult = (id: string, description: string) => {
-    setResults(results.map(result =>
-      result.id === id ? { ...result, description } : result
-    ));
+    setResults(items => {
+      const index = items.findIndex(result => result.id === id);
+      if (index === -1) return items;
+      
+      const newItems = [...items];
+      newItems[index] = { ...newItems[index], description };
+      return newItems;
+    });
   };
 
   const deleteResult = (id: string) => {
-    setResults(results.filter(result => result.id !== id));
+    setResults(items => items.filter(result => result.id !== id));
   };
 
   const handleSubmit = (e: React.FormEvent) => {

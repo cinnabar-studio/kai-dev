@@ -46,7 +46,7 @@ const FilterSortBar: React.FC<FilterSortBarProps> = ({
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search field */}
         <div className="relative flex-1">
-          <Search size={18} className="text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search size={16} className="text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchTerm}
@@ -76,7 +76,7 @@ const FilterSortBar: React.FC<FilterSortBarProps> = ({
                 }`}
                 title="Sort options"
               >
-                <ArrowDownUp size={20} />
+                <ArrowDownUp size={16} />
               </button>
               
               {showSortDropdown && (
@@ -94,7 +94,7 @@ const FilterSortBar: React.FC<FilterSortBarProps> = ({
                             if (onSortChange) onSortChange(option.id);
                             setShowSortDropdown(false);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded ${
+                          className={`w-full text-left px-3 py-2 text-sm rounded ${
                             currentSortOption === option.id 
                               ? 'bg-zinc-700 text-white' 
                               : 'hover:bg-zinc-700 text-zinc-400'
@@ -121,7 +121,7 @@ const FilterSortBar: React.FC<FilterSortBarProps> = ({
               }`}
               title="Filter options"
             >
-              <SlidersHorizontal size={20} />
+              <SlidersHorizontal size={16} />
             </button>
           )}
           

@@ -28,6 +28,11 @@ const FeedItem: React.FC<FeedItemProps> = ({
   
   const Icon = icons[type];
   
+  const truncateText = (text: string, maxLength: number = 60) => {
+    if (!text || text.length <= maxLength) return text;
+    return `${text.substring(0, maxLength)}...`;
+  };
+  
   return (
     <div className="group bg-zinc-900 rounded-lg p-4 hover:bg-zinc-800 transition-colors">
       <div className="flex items-start space-x-4">
@@ -44,15 +49,15 @@ const FeedItem: React.FC<FeedItemProps> = ({
             </div>
           )}
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Icon size={18} className="text-zinc-400" />
-              <span className="text-sm text-blue-400">{project}</span>
+              <Icon size={18} className="text-zinc-400 flex-shrink-0" />
+              <span className="text-sm text-blue-400 truncate">{project}</span>
               <span className="text-xs text-zinc-500">•</span>
-              <span className="text-xs text-zinc-500">{source}</span>
+              <span className="text-xs text-zinc-500 truncate">{source}</span>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 flex-shrink-0">
               <span className="text-xs text-zinc-500">{time}</span>
               {showBookmark && (
                 <button
@@ -70,9 +75,10 @@ const FeedItem: React.FC<FeedItemProps> = ({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 font-medium hover:text-blue-400 transition-colors block"
+            className="mt-2 font-medium hover:text-blue-400 transition-colors block truncate"
+            title={title}
           >
-            {title}
+            {truncateText(title)}
           </a>
         </div>
       </div>
